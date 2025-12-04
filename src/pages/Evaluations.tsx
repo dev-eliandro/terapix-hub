@@ -1,13 +1,18 @@
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { EvaluationCard } from '@/components/residents/EvaluationCard';
-import { mockEvaluations, mockResidents } from '@/data/mockData';
+import { EvaluationForm } from '@/components/forms/EvaluationForm';
+import { useData } from '@/contexts/DataContext';
 import { Plus, ClipboardList } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Evaluations() {
-  const evaluationsWithResident = mockEvaluations.map((evaluation) => ({
+  const { evaluations, residents } = useData();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const evaluationsWithResident = evaluations.map((evaluation) => ({
     ...evaluation,
-    resident: mockResidents.find((r) => r.id === evaluation.residentId)
+    resident: residents.find((r) => r.id === evaluation.residentId)
   }));
 
   return (
@@ -21,7 +26,7 @@ export default function Evaluations() {
               Avaliações periódicas dos acolhidos
             </p>
           </div>
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={() => setIsFormOpen(true)}>
             <Plus className="h-5 w-5" />
             Nova Avaliação
           </button>
@@ -61,6 +66,9 @@ export default function Evaluations() {
             </p>
           </div>
         )}
+
+        {/* Form Modal */}
+        <EvaluationForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />
       </div>
     </MainLayout>
   );

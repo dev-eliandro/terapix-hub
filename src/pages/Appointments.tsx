@@ -1,13 +1,18 @@
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { AppointmentCard } from '@/components/residents/AppointmentCard';
-import { mockAppointments, mockResidents } from '@/data/mockData';
+import { AppointmentForm } from '@/components/forms/AppointmentForm';
+import { useData } from '@/contexts/DataContext';
 import { Plus, Calendar, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Appointments() {
-  const appointmentsWithResident = mockAppointments.map((appointment) => ({
+  const { appointments, residents } = useData();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const appointmentsWithResident = appointments.map((appointment) => ({
     ...appointment,
-    resident: mockResidents.find((r) => r.id === appointment.residentId)
+    resident: residents.find((r) => r.id === appointment.residentId)
   }));
 
   return (
@@ -21,7 +26,7 @@ export default function Appointments() {
               Registros de atendimentos terapêuticos
             </p>
           </div>
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={() => setIsFormOpen(true)}>
             <Plus className="h-5 w-5" />
             Novo Atendimento
           </button>
@@ -61,6 +66,9 @@ export default function Appointments() {
             </p>
           </div>
         )}
+
+        {/* Form Modal */}
+        <AppointmentForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />
       </div>
     </MainLayout>
   );

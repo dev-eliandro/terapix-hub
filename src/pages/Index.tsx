@@ -2,14 +2,28 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { ResidentStatusChart } from '@/components/dashboard/ResidentStatusChart';
-import { mockDashboardStats, mockResidents } from '@/data/mockData';
+import { useData } from '@/contexts/DataContext';
 import { Users, UserCheck, Calendar, ClipboardList, Clock, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const Index = () => {
-  const activeResidents = mockResidents.filter(r => r.status === 'active').slice(0, 4);
+  const { residents, appointments, evaluations } = useData();
+  
+  const activeResidents = residents.filter(r => r.status === 'active');
+  const activeResidentsDisplay = activeResidents.slice(0, 4);
+  
+  const stats = {
+    totalResidents: residents.length,
+    activeResidents: activeResidents.length,
+    dischargedThisMonth: residents.filter(r => r.status === 'discharged').length,
+    pendingEvaluations: Math.max(0, activeResidents.length - evaluations.length),
+    appointmentsThisWeek: appointments.length,
+    averageStayDays: activeResidents.length > 0 
+      ? Math.round(activeResidents.reduce((acc, r) => acc + differenceInDays(new Date(), r.admissionDate), 0) / activeResidents.length)
+      : 0
+  };
 
   return (
     <MainLayout>
@@ -26,33 +40,33 @@ const Index = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8">
           <StatCard
             title="Total de Acolhidos"
-            value={mockDashboardStats.totalResidents}
+            value={stats.totalResidents}
             icon={<Users className="h-6 w-6" />}
           />
           <StatCard
             title="Ativos"
-            value={mockDashboardStats.activeResidents}
+            value={stats.activeResidents}
             icon={<UserCheck className="h-6 w-6" />}
             trend={{ value: 12, isPositive: true }}
           />
           <StatCard
             title="Altas no Mês"
-            value={mockDashboardStats.dischargedThisMonth}
+            value={stats.dischargedThisMonth}
             icon={<TrendingUp className="h-6 w-6" />}
           />
           <StatCard
             title="Avaliações Pendentes"
-            value={mockDashboardStats.pendingEvaluations}
+            value={stats.pendingEvaluations}
             icon={<ClipboardList className="h-6 w-6" />}
           />
           <StatCard
             title="Atendimentos/Semana"
-            value={mockDashboardStats.appointmentsThisWeek}
+            value={stats.appointmentsThisWeek}
             icon={<Calendar className="h-6 w-6" />}
           />
           <StatCard
             title="Média de Permanência"
-            value={`${mockDashboardStats.averageStayDays}d`}
+            value={`${stats.averageStayDays}d`}
             icon={<Clock className="h-6 w-6" />}
           />
         </div>
@@ -86,7 +100,7 @@ const Index = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {activeResidents.map((resident) => (
+                {activeResidentsDisplay.map((resident) => (
                   <tr key={resident.id} className="hover:bg-muted/50 transition-colors">
                     <td className="table-cell">
                       <Link

@@ -1,10 +1,12 @@
-import { mockAppointments, mockResidents } from '@/data/mockData';
+import { useData } from '@/contexts/DataContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, User, FileText } from 'lucide-react';
+import { Calendar, User } from 'lucide-react';
 
 export function RecentActivity() {
-  const recentAppointments = mockAppointments
+  const { appointments, residents } = useData();
+  
+  const recentAppointments = [...appointments]
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .slice(0, 5);
 
@@ -15,7 +17,7 @@ export function RecentActivity() {
       </h3>
       <div className="space-y-4">
         {recentAppointments.map((appointment) => {
-          const resident = mockResidents.find(r => r.id === appointment.residentId);
+          const resident = residents.find(r => r.id === appointment.residentId);
           return (
             <div
               key={appointment.id}
@@ -45,6 +47,11 @@ export function RecentActivity() {
             </div>
           );
         })}
+        {recentAppointments.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Nenhuma atividade recente
+          </p>
+        )}
       </div>
     </div>
   );
