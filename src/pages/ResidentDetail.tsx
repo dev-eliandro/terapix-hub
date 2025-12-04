@@ -4,7 +4,10 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { SubstanceTimeline } from '@/components/residents/SubstanceTimeline';
 import { EvaluationCard } from '@/components/residents/EvaluationCard';
 import { AppointmentCard } from '@/components/residents/AppointmentCard';
-import { mockResidents, mockSubstanceHistory, mockEvaluations, mockAppointments } from '@/data/mockData';
+import { ResidentForm } from '@/components/forms/ResidentForm';
+import { EvaluationForm } from '@/components/forms/EvaluationForm';
+import { AppointmentForm } from '@/components/forms/AppointmentForm';
+import { useData } from '@/contexts/DataContext';
 import { format, differenceInYears, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -17,7 +20,8 @@ import {
   ClipboardList,
   Activity,
   Edit,
-  Printer
+  Printer,
+  Plus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -37,12 +41,16 @@ const statusConfig = {
 
 export default function ResidentDetail() {
   const { id } = useParams<{ id: string }>();
+  const { residents, evaluations, appointments, substanceHistory } = useData();
   const [activeTab, setActiveTab] = useState('info');
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
+  const [isEvaluationFormOpen, setIsEvaluationFormOpen] = useState(false);
+  const [isAppointmentFormOpen, setIsAppointmentFormOpen] = useState(false);
 
-  const resident = mockResidents.find((r) => r.id === id);
-  const substanceHistory = mockSubstanceHistory.filter((h) => h.residentId === id);
-  const evaluations = mockEvaluations.filter((e) => e.residentId === id);
-  const appointments = mockAppointments.filter((a) => a.residentId === id);
+  const resident = residents.find((r) => r.id === id);
+  const residentSubstanceHistory = substanceHistory.filter((h) => h.residentId === id);
+  const residentEvaluations = evaluations.filter((e) => e.residentId === id);
+  const residentAppointments = appointments.filter((a) => a.residentId === id);
 
   if (!resident) {
     return (
@@ -93,7 +101,7 @@ export default function ResidentDetail() {
                     <button className="p-2 rounded-lg hover:bg-muted transition-colors">
                       <Printer className="h-5 w-5 text-muted-foreground" />
                     </button>
-                    <button className="btn-primary">
+                    <button className="btn-primary" onClick={() => setIsEditFormOpen(true)}>
                       <Edit className="h-4 w-4" />
                       Editar
                     </button>
@@ -143,14 +151,14 @@ export default function ResidentDetail() {
               >
                 <tab.icon className="h-4 w-4" />
                 {tab.label}
-                {tab.id === 'evaluations' && evaluations.length > 0 && (
+                {tab.id === 'evaluations' && residentEvaluations.length > 0 && (
                   <span className="ml-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
-                    {evaluations.length}
+                    {residentEvaluations.length}
                   </span>
                 )}
-                {tab.id === 'appointments' && appointments.length > 0 && (
+                {tab.id === 'appointments' && residentAppointments.length > 0 && (
                   <span className="ml-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">
-                    {appointments.length}
+                    {residentAppointments.length}
                   </span>
                 )}
               </button>
@@ -283,12 +291,18 @@ export default function ResidentDetail() {
             </div>
           )}
 
-          {activeTab === 'substances' && <SubstanceTimeline history={substanceHistory} />}
+          {activeTab === 'substances' && <SubstanceTimeline history={residentSubstanceHistory} />}
 
           {activeTab === 'evaluations' && (
             <div className="space-y-4">
-              {evaluations.length > 0 ? (
-                evaluations.map((evaluation, index) => (
+              <div className="flex justify-end">
+                <button className="btn-primary" onClick={() => setIsEvaluationFormOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Nova Avaliação
+                </button>
+              </div>
+              {residentEvaluations.length > 0 ? (
+                residentEvaluations.map((evaluation, index) => (
                   <div
                     key={evaluation.id}
                     className="animate-slide-up"
@@ -307,8 +321,14 @@ export default function ResidentDetail() {
 
           {activeTab === 'appointments' && (
             <div className="space-y-4">
-              {appointments.length > 0 ? (
-                appointments.map((appointment, index) => (
+              <div className="flex justify-end">
+                <button className="btn-primary" onClick={() => setIsAppointmentFormOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Novo Atendimento
+                </button>
+              </div>
+              {residentAppointments.length > 0 ? (
+                residentAppointments.map((appointment, index) => (
                   <div
                     key={appointment.id}
                     className="animate-slide-up"
@@ -325,6 +345,11 @@ export default function ResidentDetail() {
             </div>
           )}
         </div>
+
+        {/* Form Modals */}
+        <ResidentForm isOpen={isEditFormOpen} onClose={() => setIsEditFormOpen(false)} resident={resident} />
+        <EvaluationForm isOpen={isEvaluationFormOpen} onClose={() => setIsEvaluationFormOpen(false)} residentId={id} />
+        <AppointmentForm isOpen={isAppointmentFormOpen} onClose={() => setIsAppointmentFormOpen(false)} residentId={id} />
       </div>
     </MainLayout>
   );

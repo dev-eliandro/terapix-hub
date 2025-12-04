@@ -1,4 +1,4 @@
-import { mockResidents } from '@/data/mockData';
+import { useData } from '@/contexts/DataContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 const statusColors = {
@@ -16,7 +16,9 @@ const statusLabels = {
 };
 
 export function ResidentStatusChart() {
-  const statusCounts = mockResidents.reduce((acc, resident) => {
+  const { residents } = useData();
+  
+  const statusCounts = residents.reduce((acc, resident) => {
     acc[resident.status] = (acc[resident.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);

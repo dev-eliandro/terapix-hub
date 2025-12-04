@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ResidentCard } from '@/components/residents/ResidentCard';
-import { mockResidents } from '@/data/mockData';
+import { ResidentForm } from '@/components/forms/ResidentForm';
+import { useData } from '@/contexts/DataContext';
 import { Search, Filter, Plus, Users } from 'lucide-react';
 import { AccommodationStatus } from '@/types';
 
@@ -14,10 +15,12 @@ const statusFilters: { value: AccommodationStatus | 'all'; label: string }[] = [
 ];
 
 export default function Residents() {
+  const { residents } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<AccommodationStatus | 'all'>('all');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
-  const filteredResidents = mockResidents.filter((resident) => {
+  const filteredResidents = residents.filter((resident) => {
     const matchesSearch =
       resident.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       resident.cpf.includes(searchQuery);
@@ -36,7 +39,7 @@ export default function Residents() {
               Gerencie os acolhidos da comunidade terapêutica
             </p>
           </div>
-          <button className="btn-primary">
+          <button className="btn-primary" onClick={() => setIsFormOpen(true)}>
             <Plus className="h-5 w-5" />
             Novo Acolhido
           </button>
@@ -102,6 +105,9 @@ export default function Residents() {
             </p>
           </div>
         )}
+
+        {/* Form Modal */}
+        <ResidentForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />
       </div>
     </MainLayout>
   );
