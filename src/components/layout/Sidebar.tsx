@@ -10,10 +10,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Heart,
-  LogOut
+  LogOut,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { currentUser } from '@/data/mockData';
+import { useAuth, AppRole } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -24,9 +26,27 @@ const navigation = [
   { name: 'Configurações', href: '/settings', icon: Settings },
 ];
 
+const roleLabels: Record<AppRole, string> = {
+  admin: 'Administrador',
+  coordinator: 'Coordenador',
+  therapist: 'Terapeuta',
+  psychologist: 'Psicólogo',
+  viewer: 'Visualização',
+};
+
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { profile, role, signOut } = useAuth();
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <aside
@@ -85,21 +105,30 @@ export function Sidebar() {
         {/* User section */}
         <div className="border-t border-sidebar-border p-4">
           <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-medium">
-              {currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground font-medium text-sm">
+              {profile?.full_name ? getInitials(profile.full_name) : '?'}
             </div>
             {!collapsed && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-sidebar-foreground truncate">
-                  {currentUser.name}
+                  {profile?.full_name || 'Usuário'}
                 </p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">
-                  Coordenador Técnico
-                </p>
+                {role && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Shield className="h-3 w-3 text-sidebar-foreground/60" />
+                    <p className="text-xs text-sidebar-foreground/60 truncate">
+                      {roleLabels[role]}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             {!collapsed && (
-              <button className="rounded-lg p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+              <button 
+                onClick={signOut}
+                className="rounded-lg p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+                title="Sair"
+              >
                 <LogOut className="h-4 w-4" />
               </button>
             )}
