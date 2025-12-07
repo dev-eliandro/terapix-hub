@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Heart,
   LogOut,
-  Shield
+  Shield,
+  UserCog
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth, AppRole } from '@/contexts/AuthContext';
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Avaliações', href: '/evaluations', icon: ClipboardList },
   { name: 'Atendimentos', href: '/appointments', icon: Calendar },
   { name: 'Relatórios', href: '/reports', icon: FileText },
+  { name: 'Usuários', href: '/users', icon: UserCog, adminOnly: true },
   { name: 'Configurações', href: '/settings', icon: Settings },
 ];
 
@@ -84,6 +86,10 @@ export function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
           {navigation.map((item) => {
+            // Hide admin-only items for non-admins
+            if ('adminOnly' in item && item.adminOnly && role !== 'admin') {
+              return null;
+            }
             const isActive = location.pathname === item.href;
             return (
               <Link
