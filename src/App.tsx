@@ -13,6 +13,7 @@ import Evaluations from "./pages/Evaluations";
 import Appointments from "./pages/Appointments";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import Users from "./pages/Users";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -81,6 +82,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRoles={['admin', 'coordinator']}>
                     <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute requiredRoles={['admin']}>
+                    <Users />
                   </ProtectedRoute>
                 }
               />
