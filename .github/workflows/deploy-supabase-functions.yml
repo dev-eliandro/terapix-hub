@@ -1,0 +1,41 @@
+name: Deploy Supabase Edge Function
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy-function:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install supabase CLI
+        run: npm i -g supabase
+
+      - name: Show supabase version
+        run: supabase --version
+
+      - name: Configure service role secret (if provided)
+        if: ${{ env.SUPABASE_SERVICE_ROLE != '' }}
+        run: |
+          echo "Setting SUPABASE_SERVICE_ROLE secret for project"
+          supabase secrets set SUPABASE_SERVICE_ROLE="${{ secrets.SUPABASE_SERVICE_ROLE }}" --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Deploy create_user function
+        run: |
+          echo "Deploying create_user function"
+          supabase functions deploy create_user --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
