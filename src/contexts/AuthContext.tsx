@@ -23,6 +23,8 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasPermission: (requiredRoles: AppRole[]) => boolean;
+  updateProfile: (updates: { full_name?: string; email?: string; avatar_url?: string }) => Promise<{ error: Error | null }>;
+  changePassword: (newPassword: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -190,6 +192,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return requiredRoles.includes(role);
   };
 
+  const updateProfile = async (updates: { full_name?: string; email?: string; avatar_url?: string }) => {
+    if (!user) {
+      toast({ title: 'Erro', description: 'Usuário não autenticado', variant: 'destructive' });
+      return { error: new Error('Not authenticated') };
+    }
+
+    try {
+      // If email changed, update auth user first
+      if (updates.email && updates.email !== user.email) {
+        const { error: authError } = await supabase.auth.updateUser({ email: updates.email });
+        if (authError) {
+          toast({ title: 'Erro ao atualizar email', description: authError.message, variant: 'destructive' });
+          return { error: authError };
+        }
+      }
+
+      const payload = { user_id: user.id, ...updates } as any;
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(payload, { onConflict: 'user_id', returning: 'representation' })
+        .single();
+
+      if (error) {
+        toast({ title: 'Erro ao salvar perfil', description: error.message, variant: 'destructive' });
+        return { error };
+      }
+
+      setProfile(data);
+      toast({ title: 'Perfil atualizado', description: 'Suas informações foram salvas.' });
+      return { error: null };
+    } catch (error) {
+      toast({ title: 'Erro', description: (error as Error).message, variant: 'destructive' });
+      return { error: error as Error };
+    }
+  };
+
+  const changePassword = async (newPassword: string) => {
+    if (!user) {
+      toast({ title: 'Erro', description: 'Usuário não autenticado', variant: 'destructive' });
+      return { error: new Error('Not authenticated') };
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        toast({ title: 'Erro ao alterar senha', description: error.message, variant: 'destructive' });
+        return { error };
+      }
+
+      toast({ title: 'Senha alterada', description: 'Sua senha foi atualizada com sucesso.' });
+      return { error: null };
+    } catch (error) {
+      toast({ title: 'Erro', description: (error as Error).message, variant: 'destructive' });
+      return { error: error as Error };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -201,6 +260,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signIn,
         signUp,
         signOut,
+        updateProfile,
+        changePassword,
         hasPermission,
       }}
     >

@@ -65,6 +65,33 @@ export type Database = {
         }
         Relationships: []
       }
+      institutions: {
+        Row: {
+          id: string
+          name: string
+          cnpj: string | null
+          address: string | null
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          cnpj?: string | null
+          address?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          cnpj?: string | null
+          address?: string | null
+          created_at?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -1,6 +1,8 @@
 import { MainLayout } from '@/components/layout/MainLayout';
 import { mockDashboardStats, mockResidents, mockAppointments, mockEvaluations } from '@/data/mockData';
 import { FileText, Download, Users, Calendar, ClipboardList, TrendingUp } from 'lucide-react';
+import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
 
 const reportTypes = [
   {
@@ -49,6 +51,78 @@ const reportTypes = [
 
 export default function Reports() {
   const activeResidents = mockResidents.filter((r) => r.status === 'active').length;
+
+  const getDataForReport = (id: string) => {
+    switch (id) {
+      case 'evolution':
+        return mockEvaluations;
+      case 'history':
+        return mockEvaluations;
+      case 'appointments':
+        return mockAppointments;
+      case 'pending':
+        return mockEvaluations.filter((e) => e.status === 'pending');
+      case 'indicators':
+        return mockDashboardStats;
+      case 'census':
+        return mockResidents;
+      default:
+        return [];
+    }
+  };
+
+  const generatePdf = (reportId: string) => {
+    const data = getDataForReport(reportId);
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    const title = reportTypes.find((r) => r.id === reportId)?.title ?? 'Relatório';
+    doc.text(title, 14, 20);
+
+    doc.setFontSize(10);
+    let y = 30;
+
+    if (Array.isArray(data)) {
+      // Print simple table-like rows (max 40 rows)
+      const rows = (data as any[]).slice(0, 40);
+      rows.forEach((row, idx) => {
+        const line = Object.values(row).slice(0, 6).join(' | ');
+        doc.text(String(line), 14, y);
+        y += 6;
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+    } else if (typeof data === 'object') {
+      doc.text(JSON.stringify(data), 14, y);
+    }
+
+    doc.save(`${title}.pdf`);
+  };
+
+  const generateExcel = (reportId: string) => {
+    const data = getDataForReport(reportId);
+    let sheetData: any[] = [];
+
+    if (Array.isArray(data)) {
+      sheetData = (data as any[]).map((row) => {
+        // Flatten nested objects simply
+        const flat: Record<string, any> = {};
+        Object.entries(row).forEach(([k, v]) => {
+          if (typeof v === 'object' && v !== null) flat[k] = JSON.stringify(v);
+          else flat[k] = v;
+        });
+        return flat;
+      });
+    } else if (typeof data === 'object') {
+      sheetData = [data as any];
+    }
+
+    const ws = XLSX.utils.json_to_sheet(sheetData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    XLSX.writeFile(wb, `${reportId}.xlsx`);
+  };
 
   return (
     <MainLayout>
@@ -114,10 +188,22 @@ export default function Reports() {
                 <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                   <report.icon className="h-6 w-6" />
                 </div>
-                <button className="btn-primary text-sm py-2 px-4">
-                  <Download className="h-4 w-4" />
-                  Gerar
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    className="btn-primary text-sm py-2 px-3 flex items-center gap-2"
+                    onClick={() => generatePdf(report.id)}
+                    title={`Gerar ${report.title} (PDF)`}
+                  >
+                    PDF
+                  </button>
+                  <button
+                    className="btn-outline text-sm py-2 px-3 flex items-center gap-2"
+                    onClick={() => generateExcel(report.id)}
+                    title={`Gerar ${report.title} (Excel)`}
+                  >
+                    XLSX
+                  </button>
+                </div>
               </div>
               <h3 className="text-lg font-semibold text-foreground mt-4">{report.title}</h3>
               <p className="text-sm text-muted-foreground mt-1">{report.description}</p>

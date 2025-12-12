@@ -22,7 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, Shield, Users as UsersIcon } from 'lucide-react';
+import { Loader2, Search, Shield, Users as UsersIcon, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -58,8 +58,13 @@ const Users: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, role: currentRole, session } = useAuth();
   const { toast } = useToast();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newFullName, setNewFullName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState<AppRole>('viewer');
 
   const fetchUsers = async () => {
     try {
@@ -217,6 +222,14 @@ const Users: React.FC = () => {
                   {users.length} usuário{users.length !== 1 ? 's' : ''} no sistema
                 </CardDescription>
               </div>
+                {currentRole === 'admin' && (
+                  <div className="flex items-center gap-2">
+                    <button className="btn-outline" onClick={() => setIsCreateOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Novo Usuário
+                    </button>
+                  </div>
+                )}
               <div className="relative w-full sm:w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -320,6 +333,93 @@ const Users: React.FC = () => {
             )}
           </CardContent>
         </Card>
+        {/* Create User Modal (simple) */}
+        {isCreateOpen && currentRole === 'admin' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-2">Criar Novo Usuário</h3>
+              <div className="space-y-3">
+                <input className="input-field w-full" placeholder="Nome completo" value={newFullName} onChange={(e) => setNewFullName(e.target.value)} />
+                <input className="input-field w-full" placeholder="Email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                <input className="input-field w-full" placeholder="Senha temporária" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                <div className="flex items-center gap-2">
+                  <label className="text-sm">Cargo:</label>
+                  <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
+                    <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(roleLabels).map(([role, label]) => (
+                        <SelectItem key={role} value={role}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <button className="btn-ghost" onClick={() => setIsCreateOpen(false)}>Cancelar</button>
+                <button
+                  className="btn-primary"
+                  onClick={async () => {
+                    // Attempt to create user via Admin API (may fail on client)
+                    try {
+                      // @ts-ignore - admin SDK may not be available in client
+                      if ((supabase.auth as any)?.admin?.createUser) {
+                        // Create auth user (requires service_role key)
+                        const { data: adminData, error: adminError } = await (supabase.auth as any).admin.createUser({
+                          email: newEmail,
+                          password: newPassword,
+                          user_metadata: { full_name: newFullName }
+                        });
+
+                        if (adminError) throw adminError;
+
+                        const newUserId = adminData?.id;
+                        // Insert profile
+                        await supabase.from('profiles').insert({ id: newUserId, user_id: newUserId, full_name: newFullName, email: newEmail });
+                        // Insert role
+                        await supabase.from('user_roles').insert({ user_id: newUserId, role: newRole });
+
+                        toast({ title: 'Usuário criado', description: 'Usuário criado com sucesso.' });
+                        setIsCreateOpen(false);
+                        fetchUsers();
+                        return;
+                      }
+
+                      // Fallback: call server-side function (Supabase Edge Function or your API)
+                      try {
+                        // Prefer using supabase.functions.invoke to call the Edge Function and pass the user's access token
+                        const invokeRes = await supabase.functions.invoke('create_user', {
+                          body: JSON.stringify({ email: newEmail, password: newPassword, full_name: newFullName, role: newRole }),
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${session?.access_token}`,
+                          },
+                        });
+
+                        // supabase.functions.invoke returns a Response-like object
+                        const invokeJson = await invokeRes.json();
+                        if (!invokeRes.ok) {
+                          throw new Error(invokeJson?.error || 'Failed to create user via function');
+                        }
+
+                        toast({ title: 'Usuário criado', description: 'Usuário criado com sucesso (via função).' });
+                        setIsCreateOpen(false);
+                        fetchUsers();
+                        return;
+                      } catch (fnErr) {
+                        console.error('Function create user error:', fnErr);
+                        toast({ title: 'Erro', description: 'Não foi possível criar o usuário no servidor. Verifique logs e permissões.', variant: 'destructive' });
+                        return;
+                      }
+                    } catch (e) {
+                      console.error('Error creating user:', e);
+                      toast({ title: 'Erro', description: 'Não foi possível criar o usuário. Verifique as permissões do projeto.', variant: 'destructive' });
+                    }
+                  }}
+                >Criar Usuário</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </MainLayout>
   );

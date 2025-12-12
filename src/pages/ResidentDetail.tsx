@@ -23,6 +23,7 @@ import {
   Printer,
   Plus
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { cn } from '@/lib/utils';
 
 const tabs = [
@@ -69,6 +70,52 @@ export default function ResidentDetail() {
   const age = differenceInYears(new Date(), resident.birthDate);
   const daysInTreatment = differenceInDays(new Date(), resident.admissionDate);
 
+  const generateResidentPdf = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(resident.fullName, 14, 20);
+
+    doc.setFontSize(11);
+    let y = 30;
+
+    const addLine = (label: string, value: string) => {
+      doc.setFont(undefined, 'bold');
+      doc.text(label + ':', 14, y);
+      doc.setFont(undefined, 'normal');
+      doc.text(value, 60, y);
+      y += 8;
+      if (y > 270) { doc.addPage(); y = 20; }
+    };
+
+    addLine('CPF', resident.cpf);
+    addLine('RG', resident.rg);
+    addLine('Nascimento', format(resident.birthDate, "dd/MM/yyyy"));
+    addLine('Admissão', format(resident.admissionDate, "dd/MM/yyyy"));
+    addLine('Tempo em tratamento', `${daysInTreatment} dias`);
+    addLine('Endereço', `${resident.address.street}, ${resident.address.number}`);
+    addLine('Bairro', resident.address.neighborhood);
+    addLine('Cidade/Estado', `${resident.address.city} - ${resident.address.state}`);
+    addLine('CEP', resident.address.zipCode || '');
+    addLine('Contato emergência', `${resident.emergencyContact.name} - ${resident.emergencyContact.phone}`);
+
+    // Add brief evaluations list
+    if (residentEvaluations.length > 0) {
+      y += 6;
+      doc.setFontSize(12);
+      doc.text('Avaliações recentes:', 14, y);
+      y += 8;
+      doc.setFontSize(10);
+      residentEvaluations.slice(0, 10).forEach((ev) => {
+        const line = `${format(new Date(ev.date), 'dd/MM/yyyy')} - ${ev.summary || ev.id}`;
+        doc.text(line, 14, y);
+        y += 6;
+        if (y > 270) { doc.addPage(); y = 20; }
+      });
+    }
+
+    doc.save(`${resident.fullName.replace(/\s+/g, '_')}_report.pdf`);
+  };
+
   return (
     <MainLayout>
       <div className="animate-fade-in">
@@ -96,16 +143,16 @@ export default function ResidentDetail() {
                       {age} anos • CPF: {resident.cpf}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={cn('status-badge', status.className)}>{status.label}</span>
-                    <button className="p-2 rounded-lg hover:bg-muted transition-colors">
-                      <Printer className="h-5 w-5 text-muted-foreground" />
-                    </button>
-                    <button className="btn-primary" onClick={() => setIsEditFormOpen(true)}>
-                      <Edit className="h-4 w-4" />
-                      Editar
-                    </button>
-                  </div>
+                    <div className="flex items-center gap-3">
+                      <span className={cn('status-badge', status.className)}>{status.label}</span>
+                      <button className="p-2 rounded-lg hover:bg-muted transition-colors" onClick={generateResidentPdf}>
+                        <Printer className="h-5 w-5 text-muted-foreground" />
+                      </button>
+                      <button className="btn-primary" onClick={() => setIsEditFormOpen(true)}>
+                        <Edit className="h-4 w-4" />
+                        Editar
+                      </button>
+                    </div>
                 </div>
 
                 <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

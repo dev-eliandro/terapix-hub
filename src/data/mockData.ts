@@ -9,8 +9,8 @@ import {
 
 export const currentUser: User = {
   id: '1',
-  name: 'Dr. Ana Beatriz',
-  email: 'ana.beatriz@comunidade.org',
+  name: 'Eliandro Anjos',
+  email: 'eliandrosucesso@gmail.com',
   role: 'coordinator',
   createdAt: new Date('2023-01-15')
 };
