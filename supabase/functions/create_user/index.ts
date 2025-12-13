@@ -4,7 +4,10 @@ import { serve } from 'jsr:std/server';
 import { createClient } from 'npm:@supabase/supabase-js';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') as string;
-const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE') as string;
+// The CLI disallows secret names starting with `SUPABASE_` so allow multiple
+// possible env var names. Prefer project secret `SERVICE_ROLE` (set via CLI)
+// but also accept `SUPABASE_SERVICE_ROLE` for backwards compatibility.
+const SERVICE_ROLE = (Deno.env.get('SUPABASE_SERVICE_ROLE') || Deno.env.get('SERVICE_ROLE') || Deno.env.get('SERVICE_ROLE_KEY')) as string;
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { persistSession: false }
@@ -12,6 +15,9 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, {
 
 serve(async (req: Request) => {
   try {
+    if (!SERVICE_ROLE) {
+      return new Response(JSON.stringify({ error: 'Server misconfiguration: service role key not found. Set project secret `SERVICE_ROLE` (or `SUPABASE_SERVICE_ROLE`) via Supabase Dashboard or CLI.' }), { status: 500 });
+    }
     if (req.method !== 'POST') {
       return new Response('Method Not Allowed', { status: 405 });
     }
