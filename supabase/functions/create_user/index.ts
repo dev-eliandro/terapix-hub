@@ -1,7 +1,7 @@
 // Supabase Edge Function (Deno) - Create User with service_role
 // Deploy with: supabase functions deploy create_user
-import { serve } from 'std/server';
-import { createClient } from '@supabase/supabase-js';
+import { serve } from 'jsr:std/server';
+import { createClient } from 'npm:@supabase/supabase-js';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') as string;
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE') as string;

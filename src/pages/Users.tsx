@@ -386,6 +386,11 @@ const Users: React.FC = () => {
 
                       // Fallback: call server-side function (Supabase Edge Function or your API)
                       try {
+                        if (!session?.access_token) {
+                          toast({ title: 'Erro', description: 'Token de sessão ausente. Refaça login e tente novamente.', variant: 'destructive' });
+                          return;
+                        }
+
                         // Prefer using supabase.functions.invoke to call the Edge Function and pass the user's access token
                         const invokeRes = await supabase.functions.invoke('create_user', {
                           body: JSON.stringify({ email: newEmail, password: newPassword, full_name: newFullName, role: newRole }),
@@ -396,9 +401,25 @@ const Users: React.FC = () => {
                         });
 
                         // supabase.functions.invoke returns a Response-like object
-                        const invokeJson = await invokeRes.json();
+                        let invokeText: string | null = null;
+                        try {
+                          invokeText = await invokeRes.text();
+                        } catch (e) {
+                          console.error('Failed to read invoke response text', e);
+                        }
+
+                        let invokeJson: any = null;
+                        try {
+                          invokeJson = invokeText ? JSON.parse(invokeText) : null;
+                        } catch (e) {
+                          // not JSON
+                        }
+
                         if (!invokeRes.ok) {
-                          throw new Error(invokeJson?.error || 'Failed to create user via function');
+                          const errMsg = invokeJson?.error || invokeJson?.message || invokeText || 'Falha ao criar usuário via função';
+                          console.error('Create user function error detail:', invokeText || invokeJson);
+                          toast({ title: 'Erro', description: String(errMsg), variant: 'destructive' });
+                          return;
                         }
 
                         toast({ title: 'Usuário criado', description: 'Usuário criado com sucesso (via função).' });
@@ -407,7 +428,7 @@ const Users: React.FC = () => {
                         return;
                       } catch (fnErr) {
                         console.error('Function create user error:', fnErr);
-                        toast({ title: 'Erro', description: 'Não foi possível criar o usuário no servidor. Verifique logs e permissões.', variant: 'destructive' });
+                        toast({ title: 'Erro', description: fnErr?.message || 'Não foi possível criar o usuário no servidor. Verifique logs e permissões.', variant: 'destructive' });
                         return;
                       }
                     } catch (e) {
